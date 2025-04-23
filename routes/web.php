@@ -32,9 +32,27 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index']);
 
-// Doctor search route (public)
-Route::get('/doctors/search', [DoctorController::class, 'search'])->name('doctor.search');
-Route::get('/doctors/{doctor}', [DoctorController::class, 'show'])->name('doctor.public-profile');
+// Public routes
+Route::prefix('doctor')->group(function () {
+    Route::get('/search', [DoctorController::class, 'search'])->name('doctor.search');
+    Route::get('/{doctor}', [DoctorController::class, 'publicProfile'])->name('doctor.public-profile');
+    Route::resource('', DoctorController::class)->names([
+        'index' => 'doctor.index',
+        'create' => 'doctor.create',
+        'store' => 'doctor.store',
+        'show' => 'doctor.show',
+        'edit' => 'doctor.edit',
+        'update' => 'doctor.update',
+        'destroy' => 'doctor.destroy',
+    ]);
+});
+
+// Appointment routes (public)
+Route::prefix('appointments')->group(function () {
+    Route::post('/book/{doctor}', [AppointmentController::class, 'book'])->name('appointments.book');
+    Route::get('/confirm/{appointment}', [AppointmentController::class, 'confirm'])->name('appointments.confirm');
+    Route::get('/cancel/{appointment}', [AppointmentController::class, 'cancel'])->name('appointments.cancel');
+});
 
 // Auth routes
 require __DIR__.'/auth.php';
@@ -60,7 +78,13 @@ Route::middleware('auth')->group(function () {
     Route::middleware('doctor')->prefix('doctor')->group(function () {
         Route::get('/dashboard', [DoctorDashboardController::class, 'index'])->name('doctor.dashboard');
         Route::get('/appointments', [DoctorAppointmentController::class, 'index'])->name('doctor.appointments');
+        Route::get('/appointments/{appointment}', [DoctorAppointmentController::class, 'show'])->name('doctor.appointments.show');
         Route::get('/patients', [DoctorPatientController::class, 'index'])->name('doctor.patients');
+        Route::get('/patients/create', [DoctorPatientController::class, 'create'])->name('doctor.patients.create');
+        Route::post('/patients', [DoctorPatientController::class, 'store'])->name('doctor.patients.store');
+        Route::get('/patients/{patient}', [DoctorPatientController::class, 'show'])->name('doctor.patients.show');
+        Route::get('/patients/{patient}/edit', [DoctorPatientController::class, 'edit'])->name('doctor.patients.edit');
+        Route::put('/patients/{patient}', [DoctorPatientController::class, 'update'])->name('doctor.patients.update');
         Route::get('/profile', [DoctorProfileController::class, 'edit'])->name('doctor.profile.edit');
         Route::put('/profile', [DoctorProfileController::class, 'update'])->name('doctor.profile.update');
     });

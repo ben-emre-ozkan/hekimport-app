@@ -18,7 +18,7 @@ class DoctorController extends Controller
             ->where('is_active', true)
             ->paginate(10);
 
-        return view('doctors.index', compact('doctors'));
+        return view('doctor.index', compact('doctors'));
     }
 
     /**
@@ -26,7 +26,7 @@ class DoctorController extends Controller
      */
     public function create()
     {
-        return view('doctors.create');
+        return view('doctor.create');
     }
 
     /**
@@ -58,7 +58,7 @@ class DoctorController extends Controller
         
         $doctor->save();
         
-        return redirect()->route('doctors.index')
+        return redirect()->route('doctor.index')
             ->with('success', 'Doktor başarıyla oluşturuldu.');
     }
 
@@ -73,7 +73,7 @@ class DoctorController extends Controller
                 ->take(5);
         }]);
 
-        return view('doctors.show', compact('doctor'));
+        return view('doctor.show', compact('doctor'));
     }
 
     /**
@@ -81,7 +81,7 @@ class DoctorController extends Controller
      */
     public function edit(Doctor $doctor)
     {
-        return view('doctors.edit', compact('doctor'));
+        return view('doctor.edit', compact('doctor'));
     }
 
     /**
@@ -118,7 +118,7 @@ class DoctorController extends Controller
         
         $doctor->save();
         
-        return redirect()->route('doctors.index')
+        return redirect()->route('doctor.index')
             ->with('success', 'Doktor bilgileri başarıyla güncellendi.');
     }
 
@@ -133,7 +133,7 @@ class DoctorController extends Controller
         
         $doctor->delete();
         
-        return redirect()->route('doctors.index')
+        return redirect()->route('doctor.index')
             ->with('success', 'Doktor başarıyla silindi.');
     }
 
@@ -155,7 +155,7 @@ class DoctorController extends Controller
             })
             ->paginate(10);
 
-        return view('doctors.index', compact('doctors', 'query'));
+        return view('doctor.index', compact('doctors', 'query'));
     }
 
     public function publicProfile(Doctor $doctor)

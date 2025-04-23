@@ -4,16 +4,18 @@ namespace App\Policies;
 
 use App\Models\Patient;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
+use Illuminate\Auth\Access\HandlesAuthorization;
 
 class PatientPolicy
 {
+    use HandlesAuthorization;
+
     /**
      * Determine whether the user can view any models.
      */
     public function viewAny(User $user): bool
     {
-        return false;
+        return $user->role === 'doctor';
     }
 
     /**
@@ -21,7 +23,7 @@ class PatientPolicy
      */
     public function view(User $user, Patient $patient): bool
     {
-        return false;
+        return $user->role === 'doctor' && $user->doctor->patients()->where('patients.id', $patient->id)->exists();
     }
 
     /**
@@ -29,7 +31,7 @@ class PatientPolicy
      */
     public function create(User $user): bool
     {
-        return false;
+        return $user->role === 'doctor';
     }
 
     /**
@@ -37,7 +39,7 @@ class PatientPolicy
      */
     public function update(User $user, Patient $patient): bool
     {
-        return false;
+        return $user->role === 'doctor' && $user->doctor->patients()->where('patients.id', $patient->id)->exists();
     }
 
     /**
@@ -45,7 +47,7 @@ class PatientPolicy
      */
     public function delete(User $user, Patient $patient): bool
     {
-        return false;
+        return false; // Patients cannot be deleted, only deactivated
     }
 
     /**

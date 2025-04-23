@@ -129,56 +129,58 @@ class AppointmentController extends Controller
         return response()->json(['success' => true]);
     }
 
+    /**
+     * Book a new appointment with a doctor.
+     */
     public function book(Request $request, Doctor $doctor)
     {
-        $validator = Validator::make($request->all(), [
-            'appointment_date' => 'required|date|after:now',
-            'appointment_time' => 'required',
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255',
-            'phone' => 'required|string|max:20',
+        $request->validate([
+            'appointment_date' => 'required|date|after:today',
+            'appointment_time' => 'required|date_format:H:i',
+            'notes' => 'nullable|string|max:500',
         ]);
 
-        if ($validator->fails()) {
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput();
-        }
+        $appointment = new Appointment([
+            'doctor_id' => $doctor->id,
+            'patient_id' => Auth::user()->patient->id,
+            'appointment_date' => $request->appointment_date . ' ' . $request->appointment_time,
+            'notes' => $request->notes,
+            'status' => 'pending',
+        ]);
 
-        // Tarih ve zamanı birleştir
-        $dateTime = $request->appointment_date . ' ' . $request->appointment_time;
-        $appointmentDate = Carbon::createFromFormat('Y-m-d H:i', $dateTime);
-
-        // Hasta kontrol - Giriş yapmış mı?
-        $patient = null;
-        if (Auth::check() && Auth::user()->isPatient()) {
-            $patient = Auth::user()->patient;
-        } else {
-            // Misafir randevu - önce hasta kaydı yapalım
-            $patient = Patient::firstOrCreate(
-                ['email' => $request->email],
-                [
-                    'name' => $request->name,
-                    'phone' => $request->phone,
-                ]
-            );
-        }
-
-        // Randevu oluştur
-        $appointment = new Appointment();
-        $appointment->doctor_id = $doctor->id;
-        $appointment->patient_id = $patient->id;
-        $appointment->appointment_date = $appointmentDate;
-        $appointment->status = 'scheduled';
-        $appointment->notes = $request->notes;
         $appointment->save();
 
-        return redirect()->route('appointments.confirmation', $appointment)
-            ->with('success', 'Randevu başarıyla oluşturuldu.');
+        return redirect()->route('appointments.confirm', $appointment)
+            ->with('success', 'Randevunuz başarıyla oluşturuldu. Lütfen onaylayın.');
     }
 
-    public function confirmation(Appointment $appointment)
+    /**
+     * Confirm an appointment.
+     */
+    public function confirm(Appointment $appointment)
     {
-        return view('appointments.confirmation', compact('appointment'));
+        if ($appointment->patient_id !== Auth::user()->patient->id) {
+            abort(403);
+        }
+
+        $appointment->update(['status' => 'scheduled']);
+
+        return redirect()->route('patient.appointments')
+            ->with('success', 'Randevunuz onaylandı.');
+    }
+
+    /**
+     * Cancel an appointment.
+     */
+    public function cancel(Appointment $appointment)
+    {
+        if ($appointment->patient_id !== Auth::user()->patient->id) {
+            abort(403);
+        }
+
+        $appointment->update(['status' => 'cancelled']);
+
+        return redirect()->route('patient.appointments')
+            ->with('success', 'Randevunuz iptal edildi.');
     }
 }
