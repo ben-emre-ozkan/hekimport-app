@@ -1,0 +1,72 @@
+# Laravel spesifik
+/vendor
+/node_modules
+/public/storage
+/public/hot
+/storage/*.key
+/storage/logs/*.log
+/bootstrap/cache/*
+!.gitignore
+.env
+.env.backup
+.env.*.backup
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+Vagrantfile
+
+# IDE ve editör dosyaları
+.vscode/*
+!.vscode/extensions.json
+.idea/*
+*.sublime-project
+*.sublime-workspace
+
+# Frontend ve build araçları
+/public/build/*
+/public/mix-manifest.json
+/public/js/*
+/public/css/*
+!/public/js/app.js
+!/public/css/app.css
+npm-debug.log
+yarn-error.log
+/package-lock.json
+/yarn.lock
+
+# Test ve cache dosyaları
+/tests/_output/*
+/coverage/*
+.php_cs.cache
+.php-cs-fixer.cache
+
+# macOS pislikleri
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows pislikleri
+Thumbs.db
+Desktop.ini
+
+# Genel geliştirme pislikleri
+*.bak
+*.swp
+*.log
+*.csv
+*.sql
+*.sqlite
+*.tgz
+*.zip
+*.tar.gz
+*.tmp
+*~
+
+# Diğer olası çöpler
+*.cache
+*.lock
+*.map
+dist/
+build/
+tmp/
+temp/
