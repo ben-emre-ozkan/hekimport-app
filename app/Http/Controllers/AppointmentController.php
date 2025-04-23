@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Appointment;
 use App\Models\Doctor;
 use App\Models\Patient;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
 class AppointmentController extends Controller
@@ -125,5 +127,58 @@ class AppointmentController extends Controller
         $appointment->save();
         
         return response()->json(['success' => true]);
+    }
+
+    public function book(Request $request, Doctor $doctor)
+    {
+        $validator = Validator::make($request->all(), [
+            'appointment_date' => 'required|date|after:now',
+            'appointment_time' => 'required',
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
+            'phone' => 'required|string|max:20',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        // Tarih ve zamanı birleştir
+        $dateTime = $request->appointment_date . ' ' . $request->appointment_time;
+        $appointmentDate = Carbon::createFromFormat('Y-m-d H:i', $dateTime);
+
+        // Hasta kontrol - Giriş yapmış mı?
+        $patient = null;
+        if (Auth::check() && Auth::user()->isPatient()) {
+            $patient = Auth::user()->patient;
+        } else {
+            // Misafir randevu - önce hasta kaydı yapalım
+            $patient = Patient::firstOrCreate(
+                ['email' => $request->email],
+                [
+                    'name' => $request->name,
+                    'phone' => $request->phone,
+                ]
+            );
+        }
+
+        // Randevu oluştur
+        $appointment = new Appointment();
+        $appointment->doctor_id = $doctor->id;
+        $appointment->patient_id = $patient->id;
+        $appointment->appointment_date = $appointmentDate;
+        $appointment->status = 'scheduled';
+        $appointment->notes = $request->notes;
+        $appointment->save();
+
+        return redirect()->route('appointments.confirmation', $appointment)
+            ->with('success', 'Randevu başarıyla oluşturuldu.');
+    }
+
+    public function confirmation(Appointment $appointment)
+    {
+        return view('appointments.confirmation', compact('appointment'));
     }
 }

@@ -14,7 +14,10 @@ class DoctorController extends Controller
      */
     public function index()
     {
-        $doctors = Doctor::all();
+        $doctors = Doctor::with(['clinic', 'user'])
+            ->where('is_active', true)
+            ->paginate(10);
+
         return view('doctors.index', compact('doctors'));
     }
 
@@ -56,7 +59,7 @@ class DoctorController extends Controller
         $doctor->save();
         
         return redirect()->route('doctors.index')
-            ->with('success', 'Doktor başarıyla eklendi.');
+            ->with('success', 'Doktor başarıyla oluşturuldu.');
     }
 
     /**
@@ -64,6 +67,12 @@ class DoctorController extends Controller
      */
     public function show(Doctor $doctor)
     {
+        $doctor->load(['clinic', 'user', 'appointments' => function ($query) {
+            $query->where('status', 'scheduled')
+                ->orderBy('appointment_date')
+                ->take(5);
+        }]);
+
         return view('doctors.show', compact('doctor'));
     }
 
@@ -126,5 +135,31 @@ class DoctorController extends Controller
         
         return redirect()->route('doctors.index')
             ->with('success', 'Doktor başarıyla silindi.');
+    }
+
+    /**
+     * Search doctors by name, specialty, or clinic.
+     */
+    public function search(Request $request)
+    {
+        $query = $request->input('query');
+        
+        $doctors = Doctor::with(['clinic', 'user'])
+            ->where('is_active', true)
+            ->where(function ($q) use ($query) {
+                $q->where('name', 'like', "%{$query}%")
+                    ->orWhere('specialty', 'like', "%{$query}%")
+                    ->orWhereHas('clinic', function ($q) use ($query) {
+                        $q->where('name', 'like', "%{$query}%");
+                    });
+            })
+            ->paginate(10);
+
+        return view('doctors.index', compact('doctors', 'query'));
+    }
+
+    public function publicProfile(Doctor $doctor)
+    {
+        return view('doctor.public-profile', compact('doctor'));
     }
 }

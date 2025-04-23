@@ -11,6 +11,7 @@ class Appointment extends Model
     use HasFactory;
     
     protected $fillable = [
+        'clinic_id',
         'doctor_id',
         'patient_id',
         'appointment_date',
@@ -21,6 +22,14 @@ class Appointment extends Model
     protected $casts = [
         'appointment_date' => 'datetime',
     ];
+    
+    /**
+     * Get the clinic that owns the appointment.
+     */
+    public function clinic(): BelongsTo
+    {
+        return $this->belongsTo(Clinic::class);
+    }
     
     /**
      * Get the doctor that owns the appointment.

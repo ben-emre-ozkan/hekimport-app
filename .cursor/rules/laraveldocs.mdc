@@ -1,0 +1,12 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Your rule content
+
+- You can @ files here
+- You can use markdown but dont have to
+# Reference to Laravel 12 documentation
+@laravel-docs: Use the official Laravel 12 documentation at https://laravel.com/docs/12.x for context when answering questions or suggesting code related to Laravel.

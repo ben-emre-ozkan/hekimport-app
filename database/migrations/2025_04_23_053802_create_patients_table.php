@@ -21,6 +21,7 @@ return new class extends Migration
             $table->text('address')->nullable();
             $table->string('emergency_contact')->nullable();
             $table->text('medical_history')->nullable();
+            $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
     }
