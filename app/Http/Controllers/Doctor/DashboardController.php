@@ -8,12 +8,31 @@ use App\Models\Patient;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class DashboardController extends Controller
 {
     public function index()
     {
+        Log::info('DoctorDashboardController@index called', [
+            'user' => Auth::user(),
+            'user_id' => Auth::id(),
+            'role' => Auth::user()->role,
+            'is_doctor' => Auth::user()->isDoctor()
+        ]);
+
         $doctor = Auth::user()->doctor;
+        
+        if (!$doctor) {
+            Log::error('Doctor profile not found', [
+                'user_id' => Auth::id()
+            ]);
+            abort(404, 'Doctor profile not found');
+        }
+
+        Log::info('Doctor profile found', [
+            'doctor_id' => $doctor->id
+        ]);
         
         // Toplam randevu sayısı
         $appointmentsCount = $doctor->appointments()->count();
@@ -39,6 +58,13 @@ class DashboardController extends Controller
         
         // Toplam hasta sayısı
         $patientsCount = $doctor->patients()->distinct()->count();
+        
+        Log::info('Dashboard data prepared', [
+            'appointments_count' => $appointmentsCount,
+            'today_appointments_count' => $todayAppointmentsCount,
+            'upcoming_appointments_count' => $upcomingAppointments->count(),
+            'patients_count' => $patientsCount
+        ]);
         
         return view('doctor.dashboard', compact(
             'appointmentsCount',

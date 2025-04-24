@@ -14,7 +14,7 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        $clinic = auth()->user()->clinic;
+        $clinic = auth()->user()->clinic()->first();
         
         if (!$clinic) {
             return redirect()->route('login')->with('error', 'Klinik bilgileriniz bulunamadı.');

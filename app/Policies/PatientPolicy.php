@@ -15,7 +15,7 @@ class PatientPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->role === 'doctor';
+        return $user->isDoctor() || $user->isPersonel();
     }
 
     /**
@@ -23,7 +23,7 @@ class PatientPolicy
      */
     public function view(User $user, Patient $patient): bool
     {
-        return $user->role === 'doctor' && $user->doctor->patients()->where('patients.id', $patient->id)->exists();
+        return $user->isDoctor() && $patient->doctor_id === $user->id;
     }
 
     /**
@@ -31,7 +31,7 @@ class PatientPolicy
      */
     public function create(User $user): bool
     {
-        return $user->role === 'doctor';
+        return $user->isDoctor();
     }
 
     /**
@@ -39,7 +39,7 @@ class PatientPolicy
      */
     public function update(User $user, Patient $patient): bool
     {
-        return $user->role === 'doctor' && $user->doctor->patients()->where('patients.id', $patient->id)->exists();
+        return $user->isDoctor() && $patient->doctor_id === $user->id;
     }
 
     /**
@@ -47,7 +47,7 @@ class PatientPolicy
      */
     public function delete(User $user, Patient $patient): bool
     {
-        return false; // Patients cannot be deleted, only deactivated
+        return $user->isDoctor() && $patient->doctor_id === $user->id;
     }
 
     /**

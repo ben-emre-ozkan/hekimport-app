@@ -3,184 +3,211 @@
 namespace App\Http\Controllers;
 
 use App\Models\Appointment;
-use App\Models\Doctor;
 use App\Models\Patient;
-use Carbon\Carbon;
+use App\Models\Doctor;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
+use Illuminate\Validation\Rule;
 
 class AppointmentController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function __construct()
     {
-        $appointments = Appointment::with(['doctor', 'patient'])->orderBy('appointment_date')->get();
-        return view('appointments.index', compact('appointments'));
+        $this->middleware('auth');
+        $this->middleware('clinic');
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
+    public function index(Request $request)
+    {
+        $query = Appointment::query()->with(['patient', 'doctor']);
+
+        // Filter by date range
+        if ($request->has('start_date') && $request->has('end_date')) {
+            $query->whereBetween('start_time', [
+                Carbon::parse($request->start_date),
+                Carbon::parse($request->end_date)
+            ]);
+        }
+
+        // Filter by doctor
+        if ($request->has('doctor_id')) {
+            $query->where('doctor_id', $request->doctor_id);
+        }
+
+        // Filter by status
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Get appointments for calendar view
+        if ($request->has('view') && $request->view === 'calendar') {
+            $appointments = $query->get()->map(function ($appointment) {
+                return [
+                    'id' => $appointment->id,
+                    'title' => $appointment->patient->name,
+                    'start' => $appointment->start_time,
+                    'end' => $appointment->end_time,
+                    'status' => $appointment->status,
+                    'color' => $this->getStatusColor($appointment->status),
+                ];
+            });
+
+            return response()->json($appointments);
+        }
+
+        // Regular list view
+        $appointments = $query->latest()->paginate(10);
+        $doctors = Doctor::all();
+
+        return view('clinic.appointments.index', compact('appointments', 'doctors'));
+    }
+
     public function create()
     {
-        $doctors = Doctor::where('is_active', true)->get();
         $patients = Patient::all();
-        return view('appointments.create', compact('doctors', 'patients'));
+        $doctors = Doctor::all();
+        
+        return view('clinic.appointments.create', compact('patients', 'doctors'));
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'doctor_id' => 'required|exists:doctors,id',
-            'patient_id' => 'required|exists:patients,id',
-            'appointment_date' => 'required|date|after:now',
-            'notes' => 'nullable|string',
+        $validated = $request->validate([
+            'patient_id' => ['required', 'exists:patients,id'],
+            'doctor_id' => ['required', 'exists:doctors,id'],
+            'start_time' => ['required', 'date'],
+            'end_time' => ['required', 'date', 'after:start_time'],
+            'type' => ['required', 'string', Rule::in(['checkup', 'treatment', 'consultation', 'follow-up'])],
+            'notes' => ['nullable', 'string'],
+            'is_recurring' => ['boolean'],
+            'recurring_pattern' => ['required_if:is_recurring,true', 'string', Rule::in(['daily', 'weekly', 'monthly'])],
+            'recurring_end_date' => ['required_if:is_recurring,true', 'date', 'after:start_time'],
         ]);
 
-        if ($validator->fails()) {
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput();
-        }
+        DB::transaction(function () use ($validated) {
+            $appointment = Appointment::create([
+                'patient_id' => $validated['patient_id'],
+                'doctor_id' => $validated['doctor_id'],
+                'start_time' => $validated['start_time'],
+                'end_time' => $validated['end_time'],
+                'type' => $validated['type'],
+                'notes' => $validated['notes'],
+                'status' => 'scheduled',
+            ]);
 
-        Appointment::create($request->all());
-        
-        return redirect()->route('appointments.index')
-            ->with('success', 'Randevu başarıyla oluşturuldu.');
+            // Handle recurring appointments
+            if ($validated['is_recurring']) {
+                $this->createRecurringAppointments($appointment, $validated);
+            }
+        });
+
+        return redirect()->route('clinic.appointments.index')
+            ->with('success', 'Appointment created successfully.');
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(Appointment $appointment)
     {
-        $appointment->load(['doctor', 'patient']);
-        return view('appointments.show', compact('appointment'));
+        $this->authorize('view', $appointment);
+        
+        return view('clinic.appointments.show', compact('appointment'));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit(Appointment $appointment)
     {
-        $doctors = Doctor::where('is_active', true)->get();
+        $this->authorize('update', $appointment);
+        
         $patients = Patient::all();
-        return view('appointments.edit', compact('appointment', 'doctors', 'patients'));
+        $doctors = Doctor::all();
+        
+        return view('clinic.appointments.edit', compact('appointment', 'patients', 'doctors'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, Appointment $appointment)
     {
-        $validator = Validator::make($request->all(), [
-            'doctor_id' => 'required|exists:doctors,id',
-            'patient_id' => 'required|exists:patients,id',
-            'appointment_date' => 'required|date',
-            'status' => 'required|in:scheduled,completed,cancelled',
-            'notes' => 'nullable|string',
+        $this->authorize('update', $appointment);
+        
+        $validated = $request->validate([
+            'patient_id' => ['required', 'exists:patients,id'],
+            'doctor_id' => ['required', 'exists:doctors,id'],
+            'start_time' => ['required', 'date'],
+            'end_time' => ['required', 'date', 'after:start_time'],
+            'type' => ['required', 'string', Rule::in(['checkup', 'treatment', 'consultation', 'follow-up'])],
+            'notes' => ['nullable', 'string'],
+            'status' => ['required', 'string', Rule::in(['scheduled', 'confirmed', 'cancelled', 'completed'])],
         ]);
 
-        if ($validator->fails()) {
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput();
-        }
+        $appointment->update($validated);
 
-        $appointment->update($request->all());
-        
-        return redirect()->route('appointments.index')
-            ->with('success', 'Randevu bilgileri başarıyla güncellendi.');
+        return redirect()->route('clinic.appointments.show', $appointment)
+            ->with('success', 'Appointment updated successfully.');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Appointment $appointment)
     {
-        $appointment->delete();
+        $this->authorize('delete', $appointment);
         
-        return redirect()->route('appointments.index')
-            ->with('success', 'Randevu başarıyla silindi.');
+        $appointment->delete();
+
+        return redirect()->route('clinic.appointments.index')
+            ->with('success', 'Appointment deleted successfully.');
     }
-    
-    /**
-     * Update appointment status.
-     */
+
     public function updateStatus(Request $request, Appointment $appointment)
     {
-        $validator = Validator::make($request->all(), [
-            'status' => 'required|in:scheduled,completed,cancelled',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['error' => $validator->errors()->first()], 422);
-        }
-
-        $appointment->status = $request->status;
-        $appointment->save();
+        $this->authorize('update', $appointment);
         
-        return response()->json(['success' => true]);
-    }
-
-    /**
-     * Book a new appointment with a doctor.
-     */
-    public function book(Request $request, Doctor $doctor)
-    {
         $request->validate([
-            'appointment_date' => 'required|date|after:today',
-            'appointment_time' => 'required|date_format:H:i',
-            'notes' => 'nullable|string|max:500',
+            'status' => ['required', 'string', Rule::in(['scheduled', 'confirmed', 'cancelled', 'completed'])],
         ]);
 
-        $appointment = new Appointment([
-            'doctor_id' => $doctor->id,
-            'patient_id' => Auth::user()->patient->id,
-            'appointment_date' => $request->appointment_date . ' ' . $request->appointment_time,
-            'notes' => $request->notes,
-            'status' => 'pending',
-        ]);
+        $appointment->update(['status' => $request->status]);
 
-        $appointment->save();
-
-        return redirect()->route('appointments.confirm', $appointment)
-            ->with('success', 'Randevunuz başarıyla oluşturuldu. Lütfen onaylayın.');
+        return redirect()->route('clinic.appointments.show', $appointment)
+            ->with('success', 'Appointment status updated successfully.');
     }
 
-    /**
-     * Confirm an appointment.
-     */
-    public function confirm(Appointment $appointment)
+    protected function createRecurringAppointments($appointment, $validated)
     {
-        if ($appointment->patient_id !== Auth::user()->patient->id) {
-            abort(403);
+        $start = Carbon::parse($validated['start_time']);
+        $end = Carbon::parse($validated['recurring_end_date']);
+        $pattern = $validated['recurring_pattern'];
+
+        while ($start->copy()->addDay() <= $end) {
+            switch ($pattern) {
+                case 'daily':
+                    $start->addDay();
+                    break;
+                case 'weekly':
+                    $start->addWeek();
+                    break;
+                case 'monthly':
+                    $start->addMonth();
+                    break;
+            }
+
+            if ($start <= $end) {
+                Appointment::create([
+                    'patient_id' => $appointment->patient_id,
+                    'doctor_id' => $appointment->doctor_id,
+                    'start_time' => $start->copy(),
+                    'end_time' => $start->copy()->addMinutes($appointment->start_time->diffInMinutes($appointment->end_time)),
+                    'type' => $appointment->type,
+                    'notes' => $appointment->notes,
+                    'status' => 'scheduled',
+                ]);
+            }
         }
-
-        $appointment->update(['status' => 'scheduled']);
-
-        return redirect()->route('patient.appointments')
-            ->with('success', 'Randevunuz onaylandı.');
     }
 
-    /**
-     * Cancel an appointment.
-     */
-    public function cancel(Appointment $appointment)
+    protected function getStatusColor($status)
     {
-        if ($appointment->patient_id !== Auth::user()->patient->id) {
-            abort(403);
-        }
-
-        $appointment->update(['status' => 'cancelled']);
-
-        return redirect()->route('patient.appointments')
-            ->with('success', 'Randevunuz iptal edildi.');
+        return match($status) {
+            'scheduled' => '#3B82F6', // blue
+            'confirmed' => '#10B981', // green
+            'cancelled' => '#EF4444', // red
+            'completed' => '#6B7280', // gray
+            default => '#3B82F6',
+        };
     }
 }

@@ -46,13 +46,13 @@
                     <!-- Role Selection -->
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <input type="radio" id="role_clinic" name="role" value="clinic" class="hidden peer" checked>
-                            <label for="role_clinic" class="flex flex-col items-center justify-center p-4 border border-gray-300 rounded-lg cursor-pointer peer-checked:border-teal-500 peer-checked:bg-teal-50 hover:bg-gray-50">
+                            <input type="radio" id="role_doctor" name="role" value="doctor" class="hidden peer" checked>
+                            <label for="role_doctor" class="flex flex-col items-center justify-center p-4 border border-gray-300 rounded-lg cursor-pointer peer-checked:border-teal-500 peer-checked:bg-teal-50 hover:bg-gray-50">
                                 <svg class="w-8 h-8 text-gray-500 peer-checked:text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                 </svg>
-                                <div class="mt-2 text-sm font-medium text-gray-900">Diş Hekimliği Kliniği</div>
-                                <div class="text-xs text-gray-500">Klinik yönetimi için</div>
+                                <div class="mt-2 text-sm font-medium text-gray-900">Diş Hekimi</div>
+                                <div class="text-xs text-gray-500">Hasta randevuları için</div>
                             </label>
                         </div>
                         <div>
@@ -97,8 +97,8 @@
                         </div>
                     </div>
 
-                    <!-- Clinic specific fields -->
-                    <div id="clinic-fields" class="space-y-4">
+                    <!-- Doctor specific fields -->
+                    <div id="doctor-fields" class="space-y-4">
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label for="phone" class="block text-sm font-medium text-gray-700">
@@ -205,92 +205,27 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const roleInputs = document.querySelectorAll('input[name="role"]');
-            const clinicFields = document.querySelector('#clinic-fields');
-            const patientFields = document.querySelector('#patient-fields');
-            const phoneInput = document.querySelector('#phone');
-            const phoneNumberInput = document.querySelector('#phone_number');
-            const citySelect = document.querySelector('#city');
+            const doctorFields = document.getElementById('doctor-fields');
+            const patientFields = document.getElementById('patient-fields');
 
-            function updateRequiredFields() {
+            function toggleFields() {
                 const selectedRole = document.querySelector('input[name="role"]:checked').value;
                 
-                if (selectedRole === 'clinic') {
-                    phoneInput.setAttribute('required', '');
-                    citySelect.setAttribute('required', '');
-                    phoneNumberInput.removeAttribute('required');
-                    phoneNumberInput.value = ''; // Clear patient phone when switching to clinic
+                if (selectedRole === 'doctor') {
+                    doctorFields.classList.remove('hidden');
+                    patientFields.classList.add('hidden');
                 } else {
-                    phoneNumberInput.setAttribute('required', '');
-                    phoneInput.removeAttribute('required');
-                    citySelect.removeAttribute('required');
-                    phoneInput.value = ''; // Clear clinic phone when switching to patient
-                    citySelect.value = ''; // Clear city when switching to patient
+                    doctorFields.classList.add('hidden');
+                    patientFields.classList.remove('hidden');
                 }
             }
 
             roleInputs.forEach(input => {
-                input.addEventListener('change', function() {
-                    if (this.value === 'clinic') {
-                        clinicFields.classList.remove('hidden');
-                        patientFields.classList.add('hidden');
-                    } else {
-                        clinicFields.classList.add('hidden');
-                        patientFields.classList.remove('hidden');
-                    }
-                    updateRequiredFields();
-                });
+                input.addEventListener('change', toggleFields);
             });
 
-            // Initial setup
-            updateRequiredFields();
-
-            // Form validation
-            const form = document.querySelector('#registerForm');
-            form.addEventListener('submit', function(e) {
-                const role = document.querySelector('input[name="role"]:checked').value;
-                const name = document.querySelector('#name').value.trim();
-                const email = document.querySelector('#email').value.trim();
-                const password = document.querySelector('#password').value;
-                const passwordConfirmation = document.querySelector('#password_confirmation').value;
-                const phone = document.querySelector('#phone')?.value.replace(/\D/g, '') || '';
-                const phoneNumber = document.querySelector('#phone_number')?.value.replace(/\D/g, '') || '';
-                const city = document.querySelector('#city')?.value;
-
-                let isValid = true;
-                let errorMessage = '';
-
-                if (!name || !email || !password || !passwordConfirmation) {
-                    isValid = false;
-                    errorMessage = 'Lütfen tüm zorunlu alanları doldurun.';
-                }
-
-                if (password !== passwordConfirmation) {
-                    isValid = false;
-                    errorMessage = 'Şifreler eşleşmiyor.';
-                }
-
-                if (role === 'clinic') {
-                    if (!phone || phone.length !== 10) {
-                        isValid = false;
-                        errorMessage = 'Lütfen geçerli bir telefon numarası girin.';
-                    }
-                    
-                    if (!city) {
-                        isValid = false;
-                        errorMessage = 'Lütfen şehir seçin.';
-                    }
-                } else {
-                    if (!phoneNumber || phoneNumber.length !== 10) {
-                        isValid = false;
-                        errorMessage = 'Lütfen geçerli bir telefon numarası girin.';
-                    }
-                }
-
-                if (!isValid) {
-                    e.preventDefault();
-                    alert(errorMessage);
-                }
-            });
+            // Initial toggle
+            toggleFields();
         });
     </script>
 </body>

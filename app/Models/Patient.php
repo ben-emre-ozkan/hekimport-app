@@ -12,29 +12,37 @@ class Patient extends Model
     use HasFactory;
     
     protected $fillable = [
-        'user_id',
+        'doctor_id',
+        'clinic_id',
         'name',
         'email',
         'phone',
-        'birth_date',
-        'gender',
         'address',
+        'date_of_birth',
+        'gender',
         'medical_history',
-        'allergies',
-        'is_active',
+        'notes',
     ];
     
     protected $casts = [
-        'birth_date' => 'date',
-        'is_active' => 'boolean',
+        'date_of_birth' => 'date',
+        'medical_history' => 'array',
     ];
     
     /**
      * Get the user for the patient.
      */
-    public function user(): BelongsTo
+    public function doctor(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'doctor_id');
+    }
+    
+    /**
+     * Get the clinic for the patient.
+     */
+    public function clinic(): BelongsTo
+    {
+        return $this->belongsTo(Clinic::class);
     }
     
     /**

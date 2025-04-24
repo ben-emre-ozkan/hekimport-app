@@ -22,5 +22,8 @@ class Kernel extends HttpKernel
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'clinic' => \App\Http\Middleware\EnsureUserIsClinic::class,
         'patient' => \App\Http\Middleware\EnsureUserIsPatient::class,
+        'doctor' => \App\Http\Middleware\EnsureUserIsDoctor::class,
+        'personel' => \App\Http\Middleware\PersonelMiddleware::class,
+        'student' => \App\Http\Middleware\StudentMiddleware::class,
     ];
 } 

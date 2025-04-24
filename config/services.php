@@ -35,4 +35,16 @@ return [
         ],
     ],
 
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI'),
+        'analytics_id' => env('GOOGLE_ANALYTICS_ID'),
+        'search_console_api_key' => env('GOOGLE_SEARCH_CONSOLE_API_KEY'),
+    ],
+
+    'bing' => [
+        'webmaster_api_key' => env('BING_WEBMASTER_API_KEY'),
+    ],
+
 ];

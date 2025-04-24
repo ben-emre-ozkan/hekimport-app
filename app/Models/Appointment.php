@@ -11,16 +11,22 @@ class Appointment extends Model
     use HasFactory;
     
     protected $fillable = [
-        'clinic_id',
         'doctor_id',
         'patient_id',
+        'clinic_id',
         'appointment_date',
+        'start_time',
+        'end_time',
         'status',
         'notes',
+        'type',
+        'reason',
     ];
     
     protected $casts = [
-        'appointment_date' => 'datetime',
+        'appointment_date' => 'date',
+        'start_time' => 'datetime',
+        'end_time' => 'datetime',
     ];
     
     /**
@@ -36,7 +42,7 @@ class Appointment extends Model
      */
     public function doctor(): BelongsTo
     {
-        return $this->belongsTo(Doctor::class);
+        return $this->belongsTo(User::class, 'doctor_id');
     }
     
     /**

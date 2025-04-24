@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules;
 use Illuminate\View\View;
 
@@ -40,15 +41,15 @@ class RegisteredUserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'role' => ['required', 'string', 'in:clinic,patient'],
+            'role' => ['required', 'string', 'in:doctor,patient'],
         ];
 
         // Add role-specific validation rules
-        if ($request->role === 'clinic') {
+        if ($request->role === 'doctor') {
             $rules['phone'] = ['required', 'string', 'regex:/^[0-9]{10}$/'];
             $rules['city'] = ['required', 'string', 'max:255'];
         } else {
-            $rules['phone_number'] = ['required', 'string', 'regex:/^[0-9]{10}$/'];
+            $rules['phone'] = ['required', 'string', 'regex:/^[0-9]{10}$/'];
         }
 
         $validated = $request->validate($rules);
@@ -67,28 +68,16 @@ class RegisteredUserController extends Controller
 
             Log::info('User created', ['user_id' => $user->id]);
 
-            if ($validated['role'] === 'clinic') {
-                Log::info('Creating clinic profile', ['user_id' => $user->id]);
+            if ($validated['role'] === 'doctor') {
+                Log::info('Creating doctor profile', ['user_id' => $user->id]);
 
-                // Create clinic profile
-                $clinic = Clinic::create([
+                // Create doctor profile
+                $doctor = Doctor::create([
                     'user_id' => $user->id,
                     'name' => $validated['name'],
                     'email' => $validated['email'],
                     'phone' => $validated['phone'],
                     'city' => $validated['city'],
-                    'is_active' => true,
-                ]);
-
-                Log::info('Clinic created', ['clinic_id' => $clinic->id]);
-
-                // Create first doctor profile for the clinic
-                $doctor = Doctor::create([
-                    'user_id' => $user->id,
-                    'clinic_id' => $clinic->id,
-                    'name' => $validated['name'],
-                    'email' => $validated['email'],
-                    'phone' => $validated['phone'],
                     'is_active' => true,
                 ]);
 
@@ -101,7 +90,7 @@ class RegisteredUserController extends Controller
                     'user_id' => $user->id,
                     'name' => $validated['name'],
                     'email' => $validated['email'],
-                    'phone' => $validated['phone_number'],
+                    'phone' => $validated['phone'],
                     'is_active' => true,
                 ]);
 
@@ -115,8 +104,8 @@ class RegisteredUserController extends Controller
             Auth::login($user);
 
             // Redirect based on role
-            if ($validated['role'] === 'clinic') {
-                return redirect()->route('clinic.dashboard');
+            if ($validated['role'] === 'doctor') {
+                return redirect()->route('doctor.dashboard');
             } else {
                 return redirect()->route('patient.dashboard');
             }

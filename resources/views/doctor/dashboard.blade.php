@@ -143,7 +143,7 @@
                     @endif
                     
                     <div class="mt-4 text-right">
-                        <a href="{{ route('doctor.appointments') }}" class="text-teal-600 hover:text-teal-900">
+                        <a href="{{ route('doctor.appointments.index') }}" class="text-teal-600 hover:text-teal-900">
                             Tüm randevuları görüntüle &rarr;
                         </a>
                     </div>

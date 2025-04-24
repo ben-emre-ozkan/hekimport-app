@@ -13,7 +13,7 @@ class AppointmentPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->role === 'patient';
+        return $user->isDoctor() || $user->isPersonel();
     }
 
     /**
@@ -21,7 +21,7 @@ class AppointmentPolicy
      */
     public function view(User $user, Appointment $appointment): bool
     {
-        return $user->id === $appointment->patient_id;
+        return $user->isDoctor() && $appointment->doctor_id === $user->id;
     }
 
     /**
@@ -29,7 +29,7 @@ class AppointmentPolicy
      */
     public function create(User $user): bool
     {
-        return $user->role === 'patient';
+        return $user->isDoctor() || $user->isPersonel();
     }
 
     /**
@@ -37,9 +37,7 @@ class AppointmentPolicy
      */
     public function update(User $user, Appointment $appointment): bool
     {
-        return $user->id === $appointment->patient_id && 
-               $appointment->status === 'scheduled' && 
-               $appointment->appointment_date > now();
+        return $user->isDoctor() && $appointment->doctor_id === $user->id;
     }
 
     /**
@@ -47,9 +45,7 @@ class AppointmentPolicy
      */
     public function delete(User $user, Appointment $appointment): bool
     {
-        return $user->id === $appointment->patient_id && 
-               $appointment->status === 'scheduled' && 
-               $appointment->appointment_date > now();
+        return $user->isDoctor() && $appointment->doctor_id === $user->id;
     }
 
     /**

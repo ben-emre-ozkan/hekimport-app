@@ -13,14 +13,14 @@ return new class extends Migration
     {
         Schema::create('doctors', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->nullable()->constrained()->onDelete('cascade');
-            $table->foreignId('clinic_id')->nullable()->constrained()->onDelete('cascade');
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('clinic_id')->nullable()->constrained()->nullOnDelete();
             $table->string('name');
-            $table->string('specialty')->nullable();
-            $table->string('email')->unique();
-            $table->string('phone')->nullable();
-            $table->string('city')->nullable();
+            $table->string('email');
+            $table->string('phone');
+            $table->string('city');
             $table->string('address')->nullable();
+            $table->string('specialty')->nullable();
             $table->text('bio')->nullable();
             $table->string('profile_image')->nullable();
             $table->boolean('is_active')->default(true);
@@ -28,6 +28,7 @@ return new class extends Migration
             $table->json('available_times')->nullable();
             $table->decimal('consultation_fee', 10, 2)->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 
